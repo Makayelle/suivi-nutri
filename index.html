@@ -78,19 +78,18 @@ h2{
 .quest.todo .q-em{filter:grayscale(1);opacity:.5}
 
 /* ---- grille quotidienne ---- */
-.day-row{
-  display:flex;align-items:center;gap:8px;
-  padding:7px 0;border-bottom:1px dashed var(--line);
+.day-block{
+  padding:9px 8px;border-bottom:1px dashed var(--line);
 }
-.day-row:last-of-type{border-bottom:none}
-.day-name{
-  width:38px;flex:none;font-weight:800;font-size:.72rem;letter-spacing:.04em;
-  color:var(--ink-soft);text-transform:uppercase;
+.day-block:last-of-type{border-bottom:none}
+.day-title{
+  font-weight:800;font-size:.72rem;letter-spacing:.06em;
+  color:var(--ink-soft);text-transform:uppercase;margin-bottom:7px;
 }
-.day-row.today .day-name{color:var(--green)}
-.day-row.today{background:linear-gradient(90deg,var(--green-soft),transparent 70%);border-radius:8px}
-.chips{display:flex;gap:4px;flex-wrap:wrap;flex:1}
-.gap{width:6px;flex:none}
+.day-block.today{background:linear-gradient(120deg,var(--green-soft),transparent 80%);border-radius:10px}
+.day-block.today .day-title{color:var(--green)}
+.day-chips{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.gap{width:7px;flex:none}
 
 /* ---- pastille aliment ---- */
 .chip{
@@ -118,16 +117,17 @@ h2{
   transform:rotate(9deg);
 }
 
-/* ---- réserves hebdo ---- */
-.pool-group{margin-bottom:10px}
-.pool-group:last-child{margin-bottom:0}
-.pool-label{
-  font-size:.78rem;font-weight:800;color:var(--ink-soft);margin-bottom:5px;
-  display:flex;align-items:center;gap:6px;
+/* ---- réserves hebdo : cartes en grille ---- */
+.pool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.pool-card{
+  border:1px solid var(--line);border-radius:12px;background:#fff;
+  padding:9px 8px 8px;
 }
-.pool-label .count{font-weight:700;color:var(--green);font-size:.72rem}
-.pool-label .cap-note{font-size:.68rem;color:var(--amber);font-weight:700}
-.pool-chips{display:flex;gap:5px;flex-wrap:wrap}
+.pc-head{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:2px}
+.pc-name{font-size:.76rem;font-weight:800;color:var(--ink);line-height:1.25}
+.pc-count{font-size:.68rem;font-weight:800;color:var(--green);flex:none}
+.pc-cap{font-size:.62rem;color:var(--amber);font-weight:700;margin-bottom:3px}
+.pool-card .pool-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
 
 /* ---- mémo portions ---- */
 .memo{font-size:.8rem;line-height:1.65;color:var(--ink-soft)}
@@ -342,7 +342,16 @@ nav button.active{color:var(--green)}
 <script>
 "use strict";
 const STORE_KEY = "nutri-suivi-v1";
-const DAYS = ["LUN","MAR","MER","JEU","VEN","SAM","DIM"];
+const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+/* Noms courts pour l'affichage en carte (le nom complet reste dans les Réglages) */
+const SHORT_NAMES = {
+  poulet:"Poulet / volaille", boeuf:"Bœuf", oeufs:"Œufs",
+  poissongras:"Poisson gras", poisson:"Poisson autre",
+  riz:"Riz", pates:"Pâtes", semoule:"Semoule", pdt:"Pommes de terre", legum:"Légumineuses",
+  noix:"Noix / oléagineux", feuillu:"Légume feuillu", colore:"Fruit/lég. coloré",
+  agrume:"Agrume ou kiwi", huile:"Huile colza/olive", complet:"Féculent complet",
+};
+const shortName = it => SHORT_NAMES[it.id] || it.name;
 const DAILY_CATS = [
   {id:"veg",   emoji:"🥕", target:3},
   {id:"fruit", emoji:"🍎", target:2},
@@ -572,11 +581,11 @@ function renderDaily(){
   const tIdx = todayIndex();
   let html = "";
   for (let i=0;i<7;i++){
-    html += `<div class="day-row${i===tIdx?" today":""}"><span class="day-name">${DAYS[i]}</span><div class="chips">`;
+    html += `<div class="day-block${i===tIdx?" today":""}"><div class="day-title">${DAYS[i]}</div><div class="day-chips">`;
     DAILY_CATS.forEach((c, ci)=>{
       const arr = state.week.daily[i][c.id];
       for (let k=0;k<c.target;k++){
-        html += chipHTML(c.emoji, !!arr[k], `tapDaily(${i},'${c.id}',${k})`, `${c.id} ${k+1} jour ${DAYS[i]}`);
+        html += chipHTML(c.emoji, !!arr[k], `tapDaily(${i},'${c.id}',${k})`, `${c.id} ${k+1} ${DAYS[i]}`);
       }
       if (ci < DAILY_CATS.length-1) html += `<span class="gap"></span>`;
     });
@@ -587,19 +596,23 @@ function renderDaily(){
 
 function renderPool(group, elId){
   const el = document.getElementById(elId);
-  let html = "";
+  const cards = [];
   for (const it of state.config[group]){
     if (it.count === 0) continue;
     const arr = state.week.pools[group][it.id] || [];
-    html += `<div class="pool-group"><div class="pool-label">${esc(it.name)}
-      <span class="count">${nDone(arr)}/${it.count}</span>
-      ${it.cap ? '<span class="cap-note">· plafond conseillé</span>' : ''}</div><div class="pool-chips">`;
+    let chips = "";
     for (let k=0;k<it.count;k++){
-      html += chipHTML(it.emoji, !!arr[k], `tapPool('${group}','${it.id}',${k})`, esc(it.name) + " " + (k+1));
+      chips += chipHTML(it.emoji, !!arr[k], `tapPool('${group}','${it.id}',${k})`, esc(shortName(it)) + " " + (k+1));
     }
-    html += `</div></div>`;
+    cards.push(`<div class="pool-card">
+      <div class="pc-head"><span class="pc-name">${esc(shortName(it))}</span><span class="pc-count">${nDone(arr)}/${it.count}</span></div>
+      ${it.cap ? '<div class="pc-cap">plafond conseillé</div>' : ''}
+      <div class="pool-chips">${chips}</div>
+    </div>`);
   }
-  el.innerHTML = html || `<p class="empty">Aucun aliment configuré — ajoutez-en dans Réglages.</p>`;
+  el.innerHTML = cards.length
+    ? `<div class="pool-grid">${cards.join("")}</div>`
+    : `<p class="empty">Aucun aliment configuré — ajoutez-en dans Réglages.</p>`;
 }
 
 function questHint(q){
@@ -611,7 +624,7 @@ function questHint(q){
     if (s.id === "__viande") return "viande (poulet + bœuf)";
     if (s.id === "__animal") return "protéine animale (au choix)";
     const it = (state.config[s.g]||[]).find(x=>x.id===s.id);
-    return it ? `${it.emoji} ${it.name.toLowerCase()}` : s.id;
+    return it ? `${it.emoji} ${shortName(it).toLowerCase()}` : s.id;
   };
   return q.name + " → " + q.srcs.map(s=>`${s.need}× ${nameOf(s)}`).join(" + ");
 }
