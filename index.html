@@ -82,14 +82,17 @@ h2{
   padding:9px 8px;border-bottom:1px dashed var(--line);
 }
 .day-block:last-of-type{border-bottom:none}
+.day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
 .day-title{
   font-weight:800;font-size:.72rem;letter-spacing:.06em;
-  color:var(--ink-soft);text-transform:uppercase;margin-bottom:7px;
+  color:var(--ink-soft);text-transform:uppercase;
 }
+.day-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;max-width:340px}
+.day-chips .chip{width:100%;height:auto;aspect-ratio:1.25;font-size:1.45rem;border-radius:13px}
+.chip.move{background:var(--green-soft);border-color:#C9DFC8}
+.chip.move.done{background:#F6F3EE;border-color:#E5DFD5}
 .day-block.today{background:linear-gradient(120deg,var(--green-soft),transparent 80%);border-radius:10px}
 .day-block.today .day-title{color:var(--green)}
-.day-chips{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
-.gap{width:7px;flex:none}
 
 /* ---- pastille aliment ---- */
 .chip{
@@ -126,6 +129,8 @@ h2{
 .pc-head{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:2px}
 .pc-name{font-size:.76rem;font-weight:800;color:var(--ink);line-height:1.25}
 .pc-count{font-size:.68rem;font-weight:800;color:var(--green);flex:none}
+.pc-count.jok{color:var(--amber)}
+#jokersPill{color:var(--amber);background:#F9F1E1}
 .pc-cap{font-size:.62rem;color:var(--amber);font-weight:700;margin-bottom:3px}
 .pool-card .pool-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
 
@@ -240,7 +245,7 @@ nav button.active{color:var(--green)}
     <section class="card">
       <span class="progress-pill" id="dailyPill"></span>
       <h2>Chaque jour</h2>
-      <p class="sub">3 légumes · 2 fruits · 2 produits laitiers — touchez pour barrer</p>
+      <p class="sub">3 légumes · 2 fruits · 2 laitiers · 1 activité 30 min — touchez pour barrer</p>
       <div id="dailyGrid"></div>
     </section>
 
@@ -266,6 +271,13 @@ nav button.active{color:var(--green)}
     </section>
 
     <section class="card">
+      <span class="progress-pill" id="jokersPill"></span>
+      <h2>🃏 Jokers de la semaine</h2>
+      <p class="sub">Budget à dépenser, pas un objectif : barrer = consommer. En garder en fin de semaine, c'est gagner.</p>
+      <div id="jokersPool"></div>
+    </section>
+
+    <section class="card">
       <h2>Repères de portion</h2>
       <p class="sub">Pour un adulte, par prise</p>
       <div class="memo">
@@ -274,6 +286,8 @@ nav button.active{color:var(--green)}
         <div class="memo-row"><span class="m-icon">🥛</span><span class="m-name">Laitier</span><span>80–100 g de yaourt <b>ou</b> 20–30 g de fromage</span></div>
         <div class="memo-row"><span class="m-icon">🍚</span><span class="m-name">Féculent</span><span>80–100 g cuit <b>ou</b> 40–50 g cru</span></div>
         <div class="memo-row"><span class="m-icon">🍗</span><span class="m-name">Protéine</span><span>30 à 40 g (protéines pures) ≈ 100–150 g de viande/poisson</span></div>
+        <div class="memo-row"><span class="m-icon">🏃</span><span class="m-name">Bouger</span><span>30 min d'activité <b>dynamique</b> (souffle légèrement accéléré) : marche rapide, vélo, jardinage, ménage vigoureux, escaliers, sport… Fractionnable en 2–3 fois 10 min.</span></div>
+        <div class="memo-row"><span class="m-icon">🍷</span><span class="m-name">Alcool</span><span>1 joker = 1 verre standard (10 g) · max 2/jour, et pas tous les jours</span></div>
       </div>
     </section>
   </div>
@@ -323,6 +337,17 @@ nav button.active{color:var(--green)}
       <p class="hint">💡 Ces catégories couvrent les micronutriments : noix (oméga-3, vit. E, magnésium), légumes verts feuillus (folates, fer), colorés (vit. A), agrumes (vit. C), huile colza/olive (bons lipides), féculent en version complète (fibres, vit. B).</p>
     </section>
 
+    <section class="card">
+      <h2>🃏 Jokers · budget de la semaine</h2>
+      <div id="setJokers"></div>
+      <div class="add-row">
+        <input class="i-em" id="addJokEm" maxlength="4" placeholder="🍔">
+        <input class="i-name" id="addJokName" maxlength="24" placeholder="Nouveau joker…">
+        <button onclick="addItem('jokers')">+</button>
+      </div>
+      <p class="hint">💡 Repères santé : alcool max 2 verres/jour, 10/semaine, pas tous les jours · produits sucrés et ultra-transformés à limiter. Mettez un budget réaliste pour vous, pas idéalisé.</p>
+    </section>
+
     <section class="card danger-zone">
       <h2>Semaine en cours</h2>
       <p class="sub">Remettre tous les compteurs à zéro (sans toucher à l'historique)</p>
@@ -350,15 +375,17 @@ const SHORT_NAMES = {
   riz:"Riz", pates:"Pâtes", semoule:"Semoule", pdt:"Pommes de terre", legum:"Légumineuses",
   noix:"Noix / oléagineux", feuillu:"Légume feuillu", colore:"Fruit/lég. coloré",
   agrume:"Agrume ou kiwi", huile:"Huile colza/olive", complet:"Féculent complet",
+  alcool:"Alcool", sucre:"Sucré / dessert", transfo:"Ultra-transformé",
 };
 const shortName = it => SHORT_NAMES[it.id] || it.name;
 const DAILY_CATS = [
   {id:"veg",   emoji:"🥕", target:3},
   {id:"fruit", emoji:"🍎", target:2},
   {id:"dairy", emoji:"🥛", target:2},
+  {id:"move",  emoji:"🏃", target:1},
 ];
 
-const GROUPS = { proteins:"proteinsPool", carbs:"carbsPool", micro:"microPool" };
+const GROUPS = { proteins:"proteinsPool", carbs:"carbsPool", micro:"microPool", jokers:"jokersPool" };
 
 const DEFAULT_CONFIG = {
   proteins: [
@@ -383,6 +410,11 @@ const DEFAULT_CONFIG = {
     {id:"huile",   name:"Huile colza / noix / olive", emoji:"🌻", count:3},
     {id:"complet", name:"Féculent version complète", emoji:"🌾", count:3},
   ],
+  jokers: [
+    {id:"alcool", name:"Verre d'alcool", emoji:"🍷", count:4},
+    {id:"sucre",  name:"Produit sucré / dessert", emoji:"🍰", count:3},
+    {id:"transfo",name:"Ultra-transformé / plat préparé", emoji:"🍕", count:2},
+  ],
 };
 
 /* Quêtes : chaque micronutriment est couvert par des sources pondérées.
@@ -399,6 +431,7 @@ const QUESTS = [
   {id:"mg",    name:"Magnésium", emoji:"🌰", srcs:[{g:"micro",id:"noix",need:4,w:.5},{g:"micro",id:"complet",need:3,w:.3},{g:"carbs",id:"legum",need:2,w:.2}]},
   {id:"vita",  name:"Vit. A",    emoji:"🥕", srcs:[{g:"micro",id:"colore",need:3,w:.7},{g:"daily",id:"veg",need:15,w:.3}]},
   {id:"vite",  name:"Vit. E",    emoji:"🌻", srcs:[{g:"micro",id:"noix",need:4,w:.6},{g:"micro",id:"huile",need:3,w:.4}]},
+  {id:"move",  name:"Bouger",    emoji:"🏃", srcs:[{g:"daily",id:"move",need:7,w:1}]},
 ];
 
 // ---------- dates ----------
@@ -484,6 +517,7 @@ function computeStats(week, config){
     proteins: pool("proteins"),
     carbs: pool("carbs"),
     micro: pool("micro"),
+    jokers: pool("jokers"),
     quests:{done: questsDone, tot: QUESTS.length},
   };
 }
@@ -492,6 +526,9 @@ function migrate(s){
   // v1 → v2 : ajout du groupe micro + scission du poisson
   if (!s.config.micro){
     s.config.micro = structuredClone(DEFAULT_CONFIG.micro);
+  }
+  if (!s.config.jokers){
+    s.config.jokers = structuredClone(DEFAULT_CONFIG.jokers);
   }
   const pIdx = s.config.proteins.findIndex(x=>x.id==="poisson" && !s.config.proteins.some(y=>y.id==="poissongras"));
   if (pIdx !== -1){
@@ -572,23 +609,26 @@ function load(){
 function save(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s || state)); }
 
 // ---------- rendu ----------
-function chipHTML(emoji, done, onclick, label){
-  return `<button class="chip${done?" done":""}" onclick="${onclick}" aria-pressed="${done}" aria-label="${label}"><span class="em">${emoji}</span></button>`;
+function chipHTML(emoji, done, onclick, label, extra=""){
+  return `<button class="chip${done?" done":""}${extra?" "+extra:""}" onclick="${onclick}" aria-pressed="${done}" aria-label="${label}"><span class="em">${emoji}</span></button>`;
 }
 
 function renderDaily(){
   const grid = document.getElementById("dailyGrid");
   const tIdx = todayIndex();
+  const cat = id => DAILY_CATS.find(c=>c.id===id);
+  /* grille 2×4 : ligne 1 = 3 légumes + activité · ligne 2 = 2 fruits + 2 laitiers */
+  const layout = [["veg",0],["veg",1],["veg",2],["move",0],["fruit",0],["fruit",1],["dairy",0],["dairy",1]];
   let html = "";
   for (let i=0;i<7;i++){
-    html += `<div class="day-block${i===tIdx?" today":""}"><div class="day-title">${DAYS[i]}</div><div class="day-chips">`;
-    DAILY_CATS.forEach((c, ci)=>{
-      const arr = state.week.daily[i][c.id];
-      for (let k=0;k<c.target;k++){
-        html += chipHTML(c.emoji, !!arr[k], `tapDaily(${i},'${c.id}',${k})`, `${c.id} ${k+1} ${DAYS[i]}`);
-      }
-      if (ci < DAILY_CATS.length-1) html += `<span class="gap"></span>`;
-    });
+    html += `<div class="day-block${i===tIdx?" today":""}">
+      <div class="day-head"><span class="day-title">${DAYS[i]}</span></div>
+      <div class="day-chips">`;
+    for (const [id, k] of layout){
+      const c = cat(id);
+      const arr = state.week.daily[i][id];
+      html += chipHTML(c.emoji, !!arr[k], `tapDaily(${i},'${id}',${k})`, `${id} ${k+1} ${DAYS[i]}`, id==="move" ? "move" : "");
+    }
     html += `</div></div>`;
   }
   grid.innerHTML = html;
@@ -605,7 +645,7 @@ function renderPool(group, elId){
       chips += chipHTML(it.emoji, !!arr[k], `tapPool('${group}','${it.id}',${k})`, esc(shortName(it)) + " " + (k+1));
     }
     cards.push(`<div class="pool-card">
-      <div class="pc-head"><span class="pc-name">${esc(shortName(it))}</span><span class="pc-count">${nDone(arr)}/${it.count}</span></div>
+      <div class="pc-head"><span class="pc-name">${esc(shortName(it))}</span><span class="pc-count${group==="jokers"?" jok":""}">${nDone(arr)}/${it.count}</span></div>
       ${it.cap ? '<div class="pc-cap">plafond conseillé</div>' : ''}
       <div class="pool-chips">${chips}</div>
     </div>`);
@@ -619,7 +659,8 @@ function questHint(q){
   const nameOf = s => {
     if (s.g === "daily"){
       return {veg:"légumes (grille quotidienne)", fruit:"fruits (grille quotidienne)",
-              dairy:"produits laitiers (grille quotidienne)", vegfruit:"fruits & légumes (grille quotidienne)"}[s.id];
+              dairy:"produits laitiers (grille quotidienne)", vegfruit:"fruits & légumes (grille quotidienne)",
+              move:"jours avec 30 min d'activité"}[s.id];
     }
     if (s.id === "__viande") return "viande (poulet + bœuf)";
     if (s.id === "__animal") return "protéine animale (au choix)";
@@ -648,6 +689,7 @@ function renderPills(){
   document.getElementById("carbsPill").textContent    = `${s.carbs.done}/${s.carbs.tot}`;
   document.getElementById("proteinsPill").textContent = `${s.proteins.done}/${s.proteins.tot}`;
   document.getElementById("microPill").textContent    = `${s.micro.done}/${s.micro.tot}`;
+  document.getElementById("jokersPill").textContent   = `${s.jokers.done}/${s.jokers.tot} dépensés`;
   document.getElementById("questPill").textContent    = `${s.quests.done}/${s.quests.tot} ✓`;
 }
 
@@ -665,6 +707,7 @@ function renderHistory(){
       ["Protéines", h.stats.proteins],
     ];
     if (h.stats.micro)  cats.push(["Variété micro", h.stats.micro]);
+    if (h.stats.jokers) cats.push(["Jokers dépensés 🃏", h.stats.jokers]);
     if (h.stats.quests) cats.push(["Quêtes 🎯", h.stats.quests]);
     const rows = cats.map(([label,o])=>`
       <div class="bar-row"><span class="b-label">${label}</span>
@@ -675,7 +718,7 @@ function renderHistory(){
 }
 
 function renderSettings(){
-  for (const [group, elId] of [["proteins","setProteins"],["carbs","setCarbs"],["micro","setMicro"]]){
+  for (const [group, elId] of [["proteins","setProteins"],["carbs","setCarbs"],["micro","setMicro"],["jokers","setJokers"]]){
     const el = document.getElementById(elId);
     el.innerHTML = state.config[group].map((it,idx)=>`
       <div class="set-row">
@@ -726,7 +769,7 @@ function delItem(group, idx){
   save(); renderAll();
 }
 function addItem(group){
-  const ids = {proteins:["addProtEm","addProtName"], carbs:["addCarbEm","addCarbName"], micro:["addMicroEm","addMicroName"]};
+  const ids = {proteins:["addProtEm","addProtName"], carbs:["addCarbEm","addCarbName"], micro:["addMicroEm","addMicroName"], jokers:["addJokEm","addJokName"]};
   const emEl = document.getElementById(ids[group][0]);
   const nameEl = document.getElementById(ids[group][1]);
   const name = nameEl.value.trim();
