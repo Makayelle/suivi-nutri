@@ -94,6 +94,23 @@ h2{
 .day-block.today{background:linear-gradient(120deg,var(--green-soft),transparent 80%);border-radius:10px}
 .day-block.today .day-title{color:var(--green)}
 
+/* ---- check-in du soir ---- */
+.checkin{display:flex;gap:16px;margin-top:9px;align-items:center;flex-wrap:wrap}
+.ck-group{display:flex;align-items:center;gap:5px}
+.ck-em{font-size:.95rem;margin-right:2px}
+.dot{
+  width:21px;height:21px;border-radius:50%;padding:0;
+  border:1.5px solid var(--line);background:#fff;cursor:pointer;
+  transition:transform .08s ease;
+}
+.dot:active{transform:scale(.85)}
+.dot.on{background:var(--green);border-color:var(--green)}
+.hist-feel{
+  margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);
+  font-size:.78rem;font-weight:800;color:var(--ink-soft);
+}
+.hist-feel b{color:var(--ink)}
+
 /* ---- pastille aliment ---- */
 .chip{
   width:var(--chip);height:var(--chip);flex:none;
@@ -245,7 +262,7 @@ nav button.active{color:var(--green)}
     <section class="card">
       <span class="progress-pill" id="dailyPill"></span>
       <h2>Chaque jour</h2>
-      <p class="sub">3 légumes · 2 fruits · 2 laitiers · 1 activité 30 min — touchez pour barrer</p>
+      <p class="sub">3 légumes · 2 fruits · 2 laitiers · 1 activité 30 min — le soir, notez ⚡ énergie et 😊 humeur</p>
       <div id="dailyGrid"></div>
     </section>
 
@@ -474,7 +491,9 @@ function freshWeek(config){
     pools[g] = {};
     for (const it of config[g]) pools[g][it.id] = Array(it.count).fill(false);
   }
-  return { key: weekKey(new Date()), daily, pools };
+  const checkin = {};
+  for (let i=0;i<7;i++) checkin[i] = {energy:0, mood:0};
+  return { key: weekKey(new Date()), daily, pools, checkin };
 }
 
 /* Quantité consommée pour une source de quête */
@@ -512,6 +531,14 @@ function computeStats(week, config){
     return {done, tot};
   };
   const questsDone = QUESTS.filter(q => questProgress(week, q) >= 1).length;
+  const avg = field => {
+    const vals = [];
+    for (let i=0;i<7;i++){
+      const v = week.checkin?.[i]?.[field] || 0;
+      if (v > 0) vals.push(v);
+    }
+    return vals.length ? vals.reduce((a,b)=>a+b,0) / vals.length : null;
+  };
   return {
     daily:{done:dDone, tot:dTot},
     proteins: pool("proteins"),
@@ -519,6 +546,7 @@ function computeStats(week, config){
     micro: pool("micro"),
     jokers: pool("jokers"),
     quests:{done: questsDone, tot: QUESTS.length},
+    checkin:{energy: avg("energy"), mood: avg("mood")},
   };
 }
 
@@ -576,6 +604,11 @@ function migrate(s){
     for (const it of s.config[g])
       if (emojiFix[it.id] && (it.emoji === "🫒" || it.emoji === "🫘"))
         it.emoji = emojiFix[it.id];
+  if (s.week){
+    if (!s.week.checkin) s.week.checkin = {};
+    for (let i=0;i<7;i++)
+      if (!s.week.checkin[i]) s.week.checkin[i] = {energy:0, mood:0};
+  }
   // réalignement de la clé de semaine (l'ancien calcul UTC pouvait donner J-1) :
   // si la clé stockée désigne le même lundi à ±1 jour près, on la corrige sans archiver
   if (s.week && s.week.key){
@@ -629,7 +662,19 @@ function renderDaily(){
       const arr = state.week.daily[i][id];
       html += chipHTML(c.emoji, !!arr[k], `tapDaily(${i},'${id}',${k})`, `${id} ${k+1} ${DAYS[i]}`, id==="move" ? "move" : "");
     }
-    html += `</div></div>`;
+    html += `</div>`;
+    /* check-in ⚡😊 : visible pour les jours écoulés et aujourd'hui */
+    if (i <= tIdx){
+      const ck = state.week.checkin[i];
+      const dots = (field, em) => {
+        let d = `<span class="ck-group"><span class="ck-em">${em}</span>`;
+        for (let v=1; v<=5; v++)
+          d += `<button class="dot${ck[field]>=v?" on":""}" onclick="tapCheckin(${i},'${field}',${v})" aria-label="${field} ${v}/5 ${DAYS[i]}"></button>`;
+        return d + `</span>`;
+      };
+      html += `<div class="checkin">${dots("energy","⚡")}${dots("mood","😊")}</div>`;
+    }
+    html += `</div>`;
   }
   grid.innerHTML = html;
 }
@@ -713,7 +758,10 @@ function renderHistory(){
       <div class="bar-row"><span class="b-label">${label}</span>
       <span class="bar"><i style="width:${pct(o)}%"></i></span>
       <span class="b-val">${pct(o)}%</span></div>`).join("");
-    return `<div class="hist-item"><h3>${fmtWeek(h.key)}</h3>${rows}</div>`;
+    const fmt5 = v => v==null ? "–" : v.toFixed(1).replace(".",",");
+    const feel = h.stats.checkin && (h.stats.checkin.energy!=null || h.stats.checkin.mood!=null)
+      ? `<div class="hist-feel">Ressenti moyen · ⚡ <b>${fmt5(h.stats.checkin.energy)}</b>/5 · 😊 <b>${fmt5(h.stats.checkin.mood)}</b>/5</div>` : "";
+    return `<div class="hist-item"><h3>${fmtWeek(h.key)}</h3>${rows}${feel}</div>`;
   }).join("");
 }
 
@@ -746,6 +794,11 @@ function tapDaily(dayIdx, cat, k){
   const arr = state.week.daily[dayIdx][cat];
   arr[k] = !arr[k];
   save(); renderDaily(); renderQuests(); renderPills();
+}
+function tapCheckin(dayIdx, field, val){
+  const ck = state.week.checkin[dayIdx];
+  ck[field] = (ck[field] === val) ? 0 : val; // re-taper la même note l'efface
+  save(); renderDaily();
 }
 function tapPool(group, id, k){
   const arr = state.week.pools[group][id];
