@@ -164,11 +164,25 @@ h2{
   border:1px solid var(--line);border-radius:var(--radius);
   padding:12px;margin-bottom:10px;background:var(--card);
 }
-.hist-item h3{font-family:'Fredoka',sans-serif;font-weight:500;font-size:.95rem;margin-bottom:8px}
+.hist-item h3{
+  font-family:'Fredoka',sans-serif;font-weight:500;font-size:.95rem;margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.hist-badge{
+  font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;
+  padding:3px 10px;border-radius:99px;white-space:nowrap;
+}
+.hist-badge.hi{background:var(--green-soft);color:var(--green)}
+.hist-badge.mid{background:#F9F1E1;color:var(--amber)}
+.hist-badge.low{background:#FBF0EE;color:#B9432F}
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:.75rem}
 .bar-row .b-label{width:92px;flex:none;font-weight:700;color:var(--ink-soft)}
 .bar{flex:1;height:9px;background:var(--paper);border-radius:99px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--green);border-radius:99px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--green)}
+.bar i.hi{background:var(--green)}
+.bar i.mid{background:var(--amber)}
+.bar i.low{background:#C4553F}
+.bar i.jok{background:#D9C08F}
 .bar-row .b-val{width:38px;text-align:right;font-weight:800}
 .empty{
   text-align:center;color:var(--ink-soft);font-size:.88rem;padding:30px 16px;line-height:1.6;
@@ -745,23 +759,33 @@ function renderHistory(){
     return;
   }
   const pct = o => o.tot ? Math.round(100*o.done/o.tot) : 0;
+  const barClass = p => p >= 80 ? "hi" : (p >= 50 ? "mid" : "low");
   el.innerHTML = state.history.map(h=>{
-    const cats = [
-      ["Quotidien 🥕🍎🥛", h.stats.daily],
-      ["Féculents", h.stats.carbs],
-      ["Protéines", h.stats.proteins],
-    ];
-    if (h.stats.micro)  cats.push(["Variété micro", h.stats.micro]);
-    if (h.stats.jokers) cats.push(["Jokers dépensés 🃏", h.stats.jokers]);
-    if (h.stats.quests) cats.push(["Quêtes 🎯", h.stats.quests]);
-    const rows = cats.map(([label,o])=>`
-      <div class="bar-row"><span class="b-label">${label}</span>
-      <span class="bar"><i style="width:${pct(o)}%"></i></span>
-      <span class="b-val">${pct(o)}%</span></div>`).join("");
+    /* même ordre que la page de saisie : Quêtes, Quotidien, Féculents, Protéines, Micro, Jokers */
+    const cats = [];
+    if (h.stats.quests) cats.push(["Quêtes", h.stats.quests, null]);
+    cats.push(["Quotidien", h.stats.daily, null]);
+    cats.push(["Féculents", h.stats.carbs, null]);
+    cats.push(["Protéines", h.stats.proteins, null]);
+    if (h.stats.micro)  cats.push(["Variété micro", h.stats.micro, null]);
+    if (h.stats.jokers) cats.push(["Jokers dépensés", h.stats.jokers, "jok"]);
+    const rows = cats.map(([label,o,cls])=>{
+      const p = pct(o);
+      return `<div class="bar-row"><span class="b-label">${label}</span>
+      <span class="bar"><i class="${cls || barClass(p)}" style="width:${p}%"></i></span>
+      <span class="b-val">${p}%</span></div>`;
+    }).join("");
+    /* badge de tendance : moyenne de tout sauf jokers */
+    const scored = cats.filter(c=>c[2]!=="jok").map(c=>pct(c[1]));
+    const avg = scored.length ? scored.reduce((a,b)=>a+b,0)/scored.length : 0;
+    const badge = avg >= 90 ? ["hi","🌟 Excellente"]
+                : avg >= 75 ? ["hi","👍 Bonne"]
+                : avg >= 50 ? ["mid","😐 Moyenne"]
+                : ["low","😴 En retrait"];
     const fmt5 = v => v==null ? "–" : v.toFixed(1).replace(".",",");
     const feel = h.stats.checkin && (h.stats.checkin.energy!=null || h.stats.checkin.mood!=null)
       ? `<div class="hist-feel">Ressenti moyen · ⚡ <b>${fmt5(h.stats.checkin.energy)}</b>/5 · 😊 <b>${fmt5(h.stats.checkin.mood)}</b>/5</div>` : "";
-    return `<div class="hist-item"><h3>${fmtWeek(h.key)}</h3>${rows}${feel}</div>`;
+    return `<div class="hist-item"><h3><span>${fmtWeek(h.key)}</span><span class="hist-badge ${badge[0]}">${badge[1]}</span></h3>${rows}${feel}</div>`;
   }).join("");
 }
 
