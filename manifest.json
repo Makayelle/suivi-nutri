@@ -1,6 +1,6 @@
 {
-  "name": "Mon suivi nutrition",
-  "short_name": "Nutrition",
+  "name": "FoodCheck",
+  "short_name": "FoodCheck",
   "description": "Suivi hebdomadaire des apports : protéines, féculents, fruits & légumes, produits laitiers.",
   "lang": "fr",
   "start_url": "./index.html",
