@@ -36,11 +36,44 @@ body{
 }
 header{
   padding:18px 16px 10px;
-  display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
 }
 h1{font-family:'Fredoka',sans-serif;font-weight:600;font-size:1.35rem;color:var(--green)}
 .week-label{font-size:.85rem;color:var(--ink-soft);font-weight:700}
 main{padding:0 12px}
+
+/* ---- en-tête : icône info ---- */
+.head-right{display:flex;align-items:center;gap:9px}
+.info-btn{
+  border:none;background:var(--green-soft);color:var(--green);
+  width:26px;height:26px;border-radius:50%;font-size:.8rem;flex:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
+}
+.info-btn:active{transform:scale(.9)}
+
+/* ---- teaser repères (vue Semaine) + retour vers l'info complète ---- */
+.see-all-link{
+  display:block;width:100%;margin-top:10px;border:none;background:none;
+  color:var(--green);font-weight:800;font-size:.82rem;font-family:inherit;
+  text-align:center;padding:6px 0;cursor:pointer;
+}
+.back-link{
+  border:none;background:none;color:var(--ink-soft);font-weight:800;
+  font-size:.8rem;font-family:inherit;padding:0 0 10px;cursor:pointer;
+}
+
+/* ---- vue info : liste PNNS ---- */
+.pnns-list{display:flex;flex-direction:column;gap:12px}
+.pnns-row{display:flex;gap:10px;align-items:flex-start}
+.pnns-em{font-size:1.3rem;flex:none;width:30px;text-align:center;line-height:1.3}
+.pnns-row div{font-size:.85rem;line-height:1.5;color:var(--ink-soft)}
+.pnns-row b{color:var(--ink);font-family:'Fredoka',sans-serif;font-weight:500}
+.ext-link{
+  display:block;border:1.5px solid var(--line);border-radius:11px;
+  padding:10px 12px;margin-top:8px;font-weight:800;font-size:.85rem;
+  color:var(--green);text-decoration:none;
+}
+.ext-link:active{background:var(--green-soft)}
 section.card{
   background:var(--card);
   border:1px solid var(--line);
@@ -185,6 +218,7 @@ h2{
 .bar i.jok{background:#D9C08F}
 .jok-detail{flex:1;font-size:.78rem;font-weight:800;color:var(--amber)}
 .bar-row .b-val{width:38px;text-align:right;font-weight:800}
+.bar-row .b-val.variety{width:auto;white-space:nowrap;font-size:.68rem}
 .empty{
   text-align:center;color:var(--ink-soft);font-size:.88rem;padding:30px 16px;line-height:1.6;
 }
@@ -260,7 +294,10 @@ nav button.active{color:var(--green)}
 
 <header>
   <h1>🧲 FoodCheck</h1>
-  <span class="week-label" id="weekLabel"></span>
+  <div class="head-right">
+    <span class="week-label" id="weekLabel"></span>
+    <button class="info-btn" onclick="switchView('info')" aria-label="Repères et recommandations">ℹ️</button>
+  </div>
 </header>
 
 <main>
@@ -310,17 +347,56 @@ nav button.active{color:var(--green)}
     </section>
 
     <section class="card">
-      <h2>Repères de portion</h2>
+      <h2>Repères rapides</h2>
+      <div class="memo">
+        <div class="memo-row"><span class="m-icon">🥕</span><span class="m-name">Légume</span><span>150 à 200 g</span></div>
+        <div class="memo-row"><span class="m-icon">🍗</span><span class="m-name">Protéine</span><span>≈ 1 paume de main</span></div>
+        <div class="memo-row"><span class="m-icon">🏃</span><span class="m-name">Bouger</span><span>30 min dynamique</span></div>
+      </div>
+      <button class="see-all-link" onclick="switchView('info')">Voir tous les repères →</button>
+    </section>
+  </div>
+
+  <!-- ================= VUE INFO / PNNS ================= -->
+  <div class="view" id="view-info">
+    <section class="card">
+      <button class="back-link" onclick="switchView('week')">← Retour</button>
+      <h2>🥗 Repères PNNS</h2>
+      <p class="sub">Le Programme National Nutrition Santé, résumé simplement</p>
+      <div class="pnns-list">
+        <div class="pnns-row"><span class="pnns-em">🥕</span><div><b>Fruits & légumes</b><br>5 portions par jour minimum — au-delà, c'est encore bénéfique. Un légume à chaque repas si possible.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🐟</span><div><b>Poisson</b><br>2 fois par semaine, dont 1 poisson gras (sardine, maquereau, saumon) pour les oméga-3 et la vitamine D.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🥩</span><div><b>Viande</b><br>Viande rouge limitée à ~500 g/semaine · charcuterie ≤150 g/semaine. Volaille et œufs sans limite particulière.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🥜</span><div><b>Légumineuses</b><br>Au moins 2 fois par semaine (lentilles, pois chiches, haricots…) — protéines végétales et fibres.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🍚</span><div><b>Féculents</b><br>À chaque repas selon l'appétit, sans quantité minimale imposée. Privilégier les versions complètes pour les fibres.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🥛</span><div><b>Produits laitiers</b><br>2 par jour (lait, yaourt ou fromage), à alterner.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🌻</span><div><b>Matières grasses</b><br>Varier les sources, privilégier les huiles végétales (colza, olive, noix) plutôt que le beurre en excès.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🍰</span><div><b>Sucre, sel & ultra-transformé</b><br>À limiter sans interdiction totale — le plaisir occasionnel a sa place.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🍷</span><div><b>Alcool</b><br>Maximum 2 verres/jour, pas tous les jours, et pas plus de 10/semaine.</div></div>
+        <div class="pnns-row"><span class="pnns-em">🏃</span><div><b>Activité physique</b><br>30 minutes par jour d'activité dynamique, et limiter les temps assis prolongés.</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>📏 Repères de portion</h2>
       <p class="sub">Pour un adulte, par prise</p>
       <div class="memo">
         <div class="memo-row"><span class="m-icon">🥕</span><span class="m-name">Légume</span><span>150 à 200 g</span></div>
         <div class="memo-row"><span class="m-icon">🍎</span><span class="m-name">Fruit</span><span>80 à 100 g</span></div>
         <div class="memo-row"><span class="m-icon">🥛</span><span class="m-name">Laitier</span><span>80–100 g de yaourt <b>ou</b> 20–30 g de fromage</span></div>
         <div class="memo-row"><span class="m-icon">🍚</span><span class="m-name">Féculent</span><span>80–100 g cuit <b>ou</b> 40–50 g cru</span></div>
-        <div class="memo-row"><span class="m-icon">🍗</span><span class="m-name">Protéine</span><span>30 à 40 g (protéines pures) ≈ 100–150 g de viande/poisson</span></div>
+        <div class="memo-row"><span class="m-icon">🍗</span><span class="m-name">Protéine</span><span>30 à 40 g (protéines pures) ≈ 100–150 g de viande/poisson, soit environ <b>une paume de main</b></span></div>
+        <div class="memo-row"><span class="m-icon">🌰</span><span class="m-name">Oléagineux</span><span>≈ 30 g, soit environ <b>une poignée</b></span></div>
         <div class="memo-row"><span class="m-icon">🏃</span><span class="m-name">Bouger</span><span>30 min d'activité <b>dynamique</b> (souffle légèrement accéléré) : marche rapide, vélo, jardinage, ménage vigoureux, escaliers, sport… Fractionnable en 2–3 fois 10 min.</span></div>
         <div class="memo-row"><span class="m-icon">🍷</span><span class="m-name">Alcool</span><span>1 joker = 1 verre standard (10 g) · max 2/jour, et pas tous les jours</span></div>
       </div>
+    </section>
+
+    <section class="card">
+      <h2>Pour aller plus loin</h2>
+      <p class="sub">FoodCheck s'appuie sur les recommandations officielles françaises. Le détail complet :</p>
+      <a class="ext-link" href="https://www.mangerbouger.fr" target="_blank" rel="noopener">mangerbouger.fr ↗</a>
+      <a class="ext-link" href="https://www.santepubliquefrance.fr" target="_blank" rel="noopener">santepubliquefrance.fr ↗</a>
     </section>
   </div>
 
@@ -546,6 +622,12 @@ function computeStats(week, config){
     return {done, tot};
   };
   const questsDone = QUESTS.filter(q => questProgress(week, q) >= 1).length;
+  /* Variété des féculents : nombre de types touchés au moins une fois,
+     pas la quantité — un féculent n'a pas de minimum PNNS, seule la
+     diversité compte (sauf légumineuses, déjà tirées par les quêtes). */
+  const carbsItems = config.carbs.filter(it => it.count > 0);
+  const carbsVarietyDone = carbsItems.filter(it => nDone(week.pools.carbs?.[it.id]) >= 1).length;
+  const carbsVariety = { done: carbsVarietyDone, tot: carbsItems.length };
   const avg = field => {
     const vals = [];
     for (let i=0;i<7;i++){
@@ -558,6 +640,7 @@ function computeStats(week, config){
     daily:{done:dDone, tot:dTot},
     proteins: pool("proteins"),
     carbs: pool("carbs"),
+    carbsVariety,
     micro: pool("micro"),
     jokers: pool("jokers"),
     jokersSpent: config.jokers
@@ -767,16 +850,20 @@ function renderHistory(){
   el.innerHTML = state.history.map(h=>{
     /* même ordre que la page de saisie : Quêtes, Quotidien, Féculents, Protéines, Micro — jokers à part */
     const cats = [];
-    if (h.stats.quests) cats.push(["Quêtes", h.stats.quests]);
-    cats.push(["Quotidien", h.stats.daily]);
-    cats.push(["Féculents", h.stats.carbs]);
-    cats.push(["Protéines", h.stats.proteins]);
-    if (h.stats.micro)  cats.push(["Variété micro", h.stats.micro]);
-    const rows = cats.map(([label,o])=>{
+    if (h.stats.quests) cats.push(["Quêtes", h.stats.quests, "pct"]);
+    cats.push(["Quotidien", h.stats.daily, "pct"]);
+    /* Féculents : variété (types touchés), pas quantité — manger moins de
+       glucides une semaine n'est pas "mauvais", seule la diversité l'est */
+    const hasVariety = !!h.stats.carbsVariety;
+    cats.push(["Féculents", hasVariety ? h.stats.carbsVariety : h.stats.carbs, hasVariety ? "variety" : "pct"]);
+    cats.push(["Protéines", h.stats.proteins, "pct"]);
+    if (h.stats.micro)  cats.push(["Variété micro", h.stats.micro, "pct"]);
+    const rows = cats.map(([label,o,kind])=>{
       const p = pct(o);
+      const valText = kind === "variety" ? `${o.done}/${o.tot} variés` : `${p}%`;
       return `<div class="bar-row"><span class="b-label">${label}</span>
       <span class="bar"><i class="${barClass(p)}" style="width:${p}%"></i></span>
-      <span class="b-val">${p}%</span></div>`;
+      <span class="b-val${kind==="variety" ? " variety" : ""}">${valText}</span></div>`;
     }).join("");
     /* jokers : détail consommé (1 🍷 · 2 🍰), pas de pourcentage */
     let jokRow = "";
