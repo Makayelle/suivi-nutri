@@ -506,7 +506,7 @@ const DEFAULT_CONFIG = {
   carbs: [
     {id:"riz",     name:"Riz", emoji:"🍚", count:4},
     {id:"pates",   name:"Pâtes", emoji:"🍝", count:3},
-    {id:"semoule", name:"Semoule", emoji:"🥣", count:2},
+    {id:"semoule", name:"Semoule", emoji:"🍲", count:2},
     {id:"pdt",     name:"Pommes de terre", emoji:"🥔", count:2},
     {id:"legum",   name:"Légumineuses", emoji:"🥜", count:3},
     {id:"avoine",  name:"Flocons d'avoine", emoji:"🥣", count:3},
@@ -682,6 +682,11 @@ function migrate(s){
       if (!s.week.pools.carbs) s.week.pools.carbs = {};
       s.week.pools.carbs.avoine = arr;
     }
+  }
+  // v15 → v16 : la semoule cède son bol à l'avoine, plus représentatif du porridge
+  const semouleItem = s.config.carbs.find(it => it.id === "semoule");
+  if (semouleItem && semouleItem.emoji === "🥣"){
+    semouleItem.emoji = "🍲";
   }
   const pIdx = s.config.proteins.findIndex(x=>x.id==="poisson" && !s.config.proteins.some(y=>y.id==="poissongras"));
   if (pIdx !== -1){
