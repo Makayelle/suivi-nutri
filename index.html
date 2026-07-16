@@ -509,6 +509,7 @@ const DEFAULT_CONFIG = {
     {id:"semoule", name:"Semoule", emoji:"🥣", count:2},
     {id:"pdt",     name:"Pommes de terre", emoji:"🥔", count:2},
     {id:"legum",   name:"Légumineuses", emoji:"🥜", count:3},
+    {id:"avoine",  name:"Flocons d'avoine", emoji:"🥣", count:3},
   ],
   micro: [
     {id:"noix",    name:"Poignée de noix / oléagineux", emoji:"🌰", count:4},
@@ -535,8 +536,8 @@ const QUESTS = [
   {id:"fer",   name:"Fer",       emoji:"🩸", srcs:[{g:"proteins",id:"__viande",need:3,w:.4},{g:"micro",id:"feuillu",need:3,w:.3},{g:"carbs",id:"legum",need:2,w:.3}]},
   {id:"b12",   name:"Vit. B12",  emoji:"🥚", srcs:[{g:"proteins",id:"__animal",need:5,w:.7},{g:"daily",id:"dairy",need:8,w:.3}]},
   {id:"ca",    name:"Calcium",   emoji:"🥛", srcs:[{g:"daily",id:"dairy",need:10,w:.8},{g:"micro",id:"feuillu",need:3,w:.2}]},
-  {id:"fibres",name:"Fibres",    emoji:"🌾", srcs:[{g:"daily",id:"vegfruit",need:25,w:.5},{g:"micro",id:"complet",need:3,w:.3},{g:"carbs",id:"legum",need:2,w:.2}]},
-  {id:"mg",    name:"Magnésium", emoji:"🌰", srcs:[{g:"micro",id:"noix",need:4,w:.5},{g:"micro",id:"complet",need:3,w:.3},{g:"carbs",id:"legum",need:2,w:.2}]},
+  {id:"fibres",name:"Fibres",    emoji:"🌾", srcs:[{g:"daily",id:"vegfruit",need:25,w:.4},{g:"micro",id:"complet",need:3,w:.25},{g:"carbs",id:"legum",need:2,w:.2},{g:"carbs",id:"avoine",need:3,w:.15}]},
+  {id:"mg",    name:"Magnésium", emoji:"🌰", srcs:[{g:"micro",id:"noix",need:4,w:.4},{g:"micro",id:"complet",need:3,w:.2},{g:"carbs",id:"legum",need:2,w:.2},{g:"carbs",id:"avoine",need:3,w:.2}]},
   {id:"vita",  name:"Vit. A",    emoji:"🥕", srcs:[{g:"micro",id:"colore",need:3,w:.7},{g:"daily",id:"veg",need:15,w:.3}]},
   {id:"vite",  name:"Vit. E",    emoji:"🌻", srcs:[{g:"micro",id:"noix",need:4,w:.6},{g:"micro",id:"huile",need:3,w:.4}]},
   {id:"move",  name:"Bouger",    emoji:"🏃", srcs:[{g:"daily",id:"move",need:7,w:1}]},
@@ -658,6 +659,29 @@ function migrate(s){
   }
   if (!s.config.jokers){
     s.config.jokers = structuredClone(DEFAULT_CONFIG.jokers);
+  }
+  // v14 → v15 : intégration officielle de l'avoine dans les féculents,
+  // en fusionnant une éventuelle entrée personnalisée déjà créée à la main
+  if (!s.config.carbs.find(it => it.id === "avoine")){
+    const stdIds = ["riz","pates","semoule","pdt","legum"];
+    const customIdx = s.config.carbs.findIndex(it => !stdIds.includes(it.id) && /avoine|flocon/i.test(it.name));
+    let count = 3, arr = null;
+    if (customIdx !== -1){
+      const custom = s.config.carbs[customIdx];
+      count = custom.count || 3;
+      if (s.week?.pools?.carbs?.[custom.id]){
+        arr = s.week.pools.carbs[custom.id];
+        delete s.week.pools.carbs[custom.id];
+      }
+      s.config.carbs.splice(customIdx, 1);
+    }
+    s.config.carbs.push({id:"avoine", name:"Flocons d'avoine", emoji:"🥣", count});
+    if (s.week){
+      if (!arr) arr = Array(count).fill(false);
+      else { arr = arr.slice(0, count); while (arr.length < count) arr.push(false); }
+      if (!s.week.pools.carbs) s.week.pools.carbs = {};
+      s.week.pools.carbs.avoine = arr;
+    }
   }
   const pIdx = s.config.proteins.findIndex(x=>x.id==="poisson" && !s.config.proteins.some(y=>y.id==="poissongras"));
   if (pIdx !== -1){
