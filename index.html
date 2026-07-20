@@ -527,11 +527,11 @@ const DEFAULT_CONFIG = {
   micro: [
     {id:"noix",    name:"Noix / lin / chia / chanvre", emoji:"🌰", count:4},
     {id:"autresoleagineux", name:"Autres oléagineux (amande, cajou…)", emoji:"🥥", count:3},
+    {id:"huile",   name:"Huile colza / noix", emoji:"🌻", count:3},
+    {id:"huileolive", name:"Huile d'olive / avocat", emoji:"🥑", count:3},
     {id:"feuillu", name:"Légume vert feuillu", emoji:"🥬", count:3},
     {id:"colore",  name:"Légume / fruit très coloré", emoji:"🍅", count:3},
     {id:"agrume",  name:"Agrume ou kiwi", emoji:"🍊", count:3},
-    {id:"huile",   name:"Huile colza / noix", emoji:"🌻", count:3},
-    {id:"huileolive", name:"Huile d'olive / avocat", emoji:"🥑", count:3},
     {id:"complet", name:"Féculent version complète", emoji:"🌾", count:3},
   ],
   jokers: [
@@ -692,6 +692,18 @@ function migrate(s){
   }
   if (s.config.micro && !s.config.micro.find(it => it.id === "huileolive")){
     s.config.micro.push({id:"huileolive", name:"Huile d'olive / avocat", emoji:"🥑", count:3});
+  }
+  // v19 → v20 : réordonner pour garder les paires (oléagineux, huiles) côte à
+  // côte dans la grille à 2 colonnes — sinon les nouvelles entrées, ajoutées
+  // en fin de liste par la migration précédente, se retrouvent dispersées
+  if (s.config.micro){
+    const order = ["noix","autresoleagineux","huile","huileolive","feuillu","colore","agrume","complet"];
+    const indexed = s.config.micro.map((it, i) => ({it, i}));
+    indexed.sort((a, b) => {
+      const ia = order.indexOf(a.it.id), ib = order.indexOf(b.it.id);
+      return (ia === -1 ? order.length + a.i : ia) - (ib === -1 ? order.length + b.i : ib);
+    });
+    s.config.micro = indexed.map(x => x.it);
   }
   if (s.week?.pools?.micro){
     for (const it of s.config.micro || [])
