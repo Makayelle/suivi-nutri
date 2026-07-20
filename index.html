@@ -227,6 +227,10 @@ h2{
   display:flex;align-items:center;gap:10px;
   padding:9px 0;border-bottom:1px dashed var(--line);
 }
+.set-row.target-row{
+  background:var(--green-soft);border-radius:10px;border-bottom:none;
+  padding:9px 10px;margin-bottom:6px;
+}
 .set-row:last-child{border-bottom:none}
 .set-row .s-em{font-size:1.3rem;flex:none;width:32px;text-align:center}
 .set-row .s-name{flex:1;font-weight:700;font-size:.9rem}
@@ -413,13 +417,22 @@ nav button.active{color:var(--green)}
     <section class="card">
       <h2>Protéines · objectifs de la semaine</h2>
       <p class="sub">Nombre de pastilles disponibles chaque semaine</p>
+      <div class="set-row target-row">
+        <span class="s-em">🎯</span>
+        <span class="s-name">Cible hebdo (toutes sources)</span>
+        <div class="stepper">
+          <button onclick="stepProteinsTarget(-1)" aria-label="moins">−</button>
+          <span class="val" id="proteinsTargetVal">14</span>
+          <button onclick="stepProteinsTarget(1)" aria-label="plus">+</button>
+        </div>
+      </div>
       <div id="setProteins"></div>
       <div class="add-row">
         <input class="i-em" id="addProtEm" maxlength="4" placeholder="🍤">
         <input class="i-name" id="addProtName" maxlength="24" placeholder="Nouvel aliment…">
         <button onclick="addItem('proteins')">+</button>
       </div>
-      <p class="hint">💡 Repère santé : viande rouge ≤ 500 g/semaine (≈ 2-3 portions) · poisson 2 fois/semaine dont 1 poisson gras.</p>
+      <p class="hint">💡 Repère santé : 2 portions/jour ≈ 14/semaine (cible ci-dessus) · viande rouge ≤ 500 g/semaine (≈ 2-3 portions) · poisson 2 fois/semaine dont 1 poisson gras.</p>
     </section>
 
     <section class="card">
@@ -480,8 +493,8 @@ const SHORT_NAMES = {
   poulet:"Poulet / volaille", boeuf:"Viande rouge", oeufs:"Œufs",
   poissongras:"Poisson gras", poisson:"Poisson autre",
   riz:"Riz", pates:"Pâtes", semoule:"Semoule", pdt:"Pommes de terre", legum:"Légumineuses",
-  noix:"Noix / oléagineux", feuillu:"Légume feuillu", colore:"Fruit/lég. coloré",
-  agrume:"Agrume ou kiwi", huile:"Huile colza/olive", complet:"Féculent complet",
+  noix:"Noix / lin / chia", autresoleagineux:"Autres oléagineux", feuillu:"Légume feuillu", colore:"Fruit/lég. coloré",
+  agrume:"Agrume ou kiwi", huile:"Huile colza/noix", huileolive:"Huile olive/avocat", complet:"Féculent complet",
   alcool:"Alcool", sucre:"Sucré / dessert", transfo:"Ultra-transformé",
 };
 const shortName = it => SHORT_NAMES[it.id] || it.name;
@@ -495,6 +508,7 @@ const DAILY_CATS = [
 const GROUPS = { proteins:"proteinsPool", carbs:"carbsPool", micro:"microPool", jokers:"jokersPool" };
 
 const DEFAULT_CONFIG = {
+  proteinsTarget: 14,
   proteins: [
     {id:"poulet",      name:"Poulet / volaille", emoji:"🍗", count:4},
     {id:"boeuf",       name:"Viande rouge (bœuf, porc…)", emoji:"🥩", count:2},
@@ -511,11 +525,13 @@ const DEFAULT_CONFIG = {
     {id:"avoine",  name:"Flocons d'avoine", emoji:"🥣", count:3},
   ],
   micro: [
-    {id:"noix",    name:"Poignée de noix / oléagineux", emoji:"🌰", count:4},
+    {id:"noix",    name:"Noix / lin / chia / chanvre", emoji:"🌰", count:4},
+    {id:"autresoleagineux", name:"Autres oléagineux (amande, cajou…)", emoji:"🥥", count:3},
     {id:"feuillu", name:"Légume vert feuillu", emoji:"🥬", count:3},
     {id:"colore",  name:"Légume / fruit très coloré", emoji:"🍅", count:3},
     {id:"agrume",  name:"Agrume ou kiwi", emoji:"🍊", count:3},
-    {id:"huile",   name:"Huile colza / noix / olive", emoji:"🌻", count:3},
+    {id:"huile",   name:"Huile colza / noix", emoji:"🌻", count:3},
+    {id:"huileolive", name:"Huile d'olive / avocat", emoji:"🥑", count:3},
     {id:"complet", name:"Féculent version complète", emoji:"🌾", count:3},
   ],
   jokers: [
@@ -532,13 +548,13 @@ const QUESTS = [
   {id:"o3",    name:"Oméga-3",   emoji:"🐟", srcs:[{g:"proteins",id:"poissongras",need:1,w:.5},{g:"micro",id:"noix",need:3,w:.25},{g:"micro",id:"huile",need:2,w:.25}]},
   {id:"vitc",  name:"Vit. C",    emoji:"🍊", srcs:[{g:"micro",id:"agrume",need:3,w:.6},{g:"daily",id:"fruit",need:10,w:.4}]},
   {id:"b9",    name:"Folates",   emoji:"🥬", srcs:[{g:"micro",id:"feuillu",need:3,w:.7},{g:"carbs",id:"legum",need:2,w:.3}]},
-  {id:"fer",   name:"Fer",       emoji:"🩸", srcs:[{g:"proteins",id:"__viande",need:3,w:.4},{g:"micro",id:"feuillu",need:3,w:.3},{g:"carbs",id:"legum",need:2,w:.3}]},
+  {id:"fer",   name:"Fer",       emoji:"🩸", srcs:[{g:"proteins",id:"boeuf",need:2,w:.25},{g:"proteins",id:"poulet",need:4,w:.15},{g:"micro",id:"feuillu",need:3,w:.3},{g:"carbs",id:"legum",need:2,w:.3}]},
   {id:"b12",   name:"Vit. B12",  emoji:"🥚", srcs:[{g:"proteins",id:"__animal",need:5,w:.7},{g:"daily",id:"dairy",need:8,w:.3}]},
   {id:"ca",    name:"Calcium",   emoji:"🥛", srcs:[{g:"daily",id:"dairy",need:10,w:.8},{g:"micro",id:"feuillu",need:3,w:.2}]},
   {id:"fibres",name:"Fibres",    emoji:"🌾", srcs:[{g:"daily",id:"vegfruit",need:25,w:.4},{g:"micro",id:"complet",need:3,w:.25},{g:"carbs",id:"legum",need:2,w:.2},{g:"carbs",id:"avoine",need:3,w:.15}]},
-  {id:"mg",    name:"Magnésium", emoji:"🌰", srcs:[{g:"micro",id:"noix",need:4,w:.4},{g:"micro",id:"complet",need:3,w:.2},{g:"carbs",id:"legum",need:2,w:.2},{g:"carbs",id:"avoine",need:3,w:.2}]},
+  {id:"mg",    name:"Magnésium", emoji:"🌰", srcs:[{g:"micro",id:"noix",need:4,w:.3},{g:"micro",id:"autresoleagineux",need:3,w:.2},{g:"micro",id:"complet",need:3,w:.2},{g:"carbs",id:"legum",need:2,w:.15},{g:"carbs",id:"avoine",need:3,w:.15}]},
   {id:"vita",  name:"Vit. A",    emoji:"🥕", srcs:[{g:"micro",id:"colore",need:3,w:.7},{g:"daily",id:"veg",need:15,w:.3}]},
-  {id:"vite",  name:"Vit. E",    emoji:"🌻", srcs:[{g:"micro",id:"noix",need:4,w:.6},{g:"micro",id:"huile",need:3,w:.4}]},
+  {id:"vite",  name:"Vit. E",    emoji:"🌻", srcs:[{g:"micro",id:"noix",need:4,w:.3},{g:"micro",id:"autresoleagineux",need:3,w:.3},{g:"micro",id:"huile",need:3,w:.4}]},
   {id:"move",  name:"Bouger",    emoji:"🏃", srcs:[{g:"daily",id:"move",need:7,w:1}]},
 ];
 
@@ -598,8 +614,6 @@ function srcDone(week, src){
     return sum;
   }
   const pools = week.pools[src.g] || {};
-  if (src.id === "__viande")
-    return nDone(pools.poulet) + nDone(pools.boeuf);
   if (src.id === "__animal")
     return nDone(pools.poulet) + nDone(pools.boeuf) + nDone(pools.oeufs) + nDone(pools.poisson) + nDone(pools.poissongras);
   return nDone(pools[src.id]);
@@ -628,6 +642,12 @@ function computeStats(week, config){
   const carbsItems = config.carbs.filter(it => it.count > 0);
   const carbsVarietyDone = carbsItems.filter(it => nDone(week.pools.carbs?.[it.id]) >= 1).length;
   const carbsVariety = { done: carbsVarietyDone, tot: carbsItems.length };
+  /* Protéines : la cible est un nombre hebdomadaire indépendant du nombre
+     de types configurés (ajouter un aliment ne doit pas diluer le %) ;
+     les plafonds par aliment (ex. viande rouge ≤2) restent des garde-fous. */
+  const proteinsTarget = config.proteinsTarget || 14;
+  const proteinsRaw = pool("proteins");
+  const proteins = { done: Math.min(proteinsRaw.done, proteinsTarget), tot: proteinsTarget };
   const avg = field => {
     const vals = [];
     for (let i=0;i<7;i++){
@@ -638,7 +658,7 @@ function computeStats(week, config){
   };
   return {
     daily:{done:dDone, tot:dTot},
-    proteins: pool("proteins"),
+    proteins,
     carbs: pool("carbs"),
     carbsVariety,
     micro: pool("micro"),
@@ -652,6 +672,31 @@ function computeStats(week, config){
 }
 
 function migrate(s){
+  // v18 → v19 : cible protéines découplée, par défaut 14 (2 portions/jour)
+  if (typeof s.config.proteinsTarget !== "number"){
+    s.config.proteinsTarget = 14;
+  }
+  // v18 → v19 : scission oléagineux (noix/lin/chia vs autres) et huile (colza/noix vs olive/avocat) —
+  // les ids "noix" et "huile" sont conservés tels quels (données existantes intactes), seuls
+  // leurs libellés changent, et deux nouvelles entrées apparaissent à leurs côtés
+  const noixItem = s.config.micro?.find(it => it.id === "noix");
+  if (noixItem && noixItem.name === "Poignée de noix / oléagineux"){
+    noixItem.name = "Noix / lin / chia / chanvre";
+  }
+  const huileItem = s.config.micro?.find(it => it.id === "huile");
+  if (huileItem && huileItem.name === "Huile colza / noix / olive"){
+    huileItem.name = "Huile colza / noix";
+  }
+  if (s.config.micro && !s.config.micro.find(it => it.id === "autresoleagineux")){
+    s.config.micro.push({id:"autresoleagineux", name:"Autres oléagineux (amande, cajou…)", emoji:"🥥", count:3});
+  }
+  if (s.config.micro && !s.config.micro.find(it => it.id === "huileolive")){
+    s.config.micro.push({id:"huileolive", name:"Huile d'olive / avocat", emoji:"🥑", count:3});
+  }
+  if (s.week?.pools?.micro){
+    for (const it of s.config.micro || [])
+      if (!(it.id in s.week.pools.micro)) s.week.pools.micro[it.id] = Array(it.count).fill(false);
+  }
   // v1 → v2 : ajout du groupe micro + scission du poisson
   if (!s.config.micro){
     s.config.micro = structuredClone(DEFAULT_CONFIG.micro);
@@ -924,6 +969,7 @@ function renderHistory(){
 }
 
 function renderSettings(){
+  document.getElementById("proteinsTargetVal").textContent = state.config.proteinsTarget || 14;
   for (const [group, elId] of [["proteins","setProteins"],["carbs","setCarbs"],["micro","setMicro"],["jokers","setJokers"]]){
     const el = document.getElementById(elId);
     el.innerHTML = state.config[group].map((it,idx)=>`
@@ -962,6 +1008,10 @@ function tapPool(group, id, k){
   const arr = state.week.pools[group][id];
   arr[k] = !arr[k];
   save(); renderPool(group, GROUPS[group]); renderQuests(); renderPills();
+}
+function stepProteinsTarget(delta){
+  state.config.proteinsTarget = Math.max(7, Math.min(21, (state.config.proteinsTarget || 14) + delta));
+  save(); renderSettings(); renderPills();
 }
 function stepItem(group, idx, delta){
   const it = state.config[group][idx];
